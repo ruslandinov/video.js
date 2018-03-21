@@ -333,12 +333,15 @@ QUnit[qunitFn]('sourceset', function(hooks) {
     const appendTypes = [
       {name: 'appendChild', fn: (el, obj) => el.appendChild(obj)},
       {name: 'innerHTML', fn: (el, obj) => {el.innerHTML = obj.outerHTML;}}, // eslint-disable-line
-      {name: 'insertAdjacentHTML', fn: (el, obj) => el.insertAdjacentHTML('afterbegin', obj.outerHTML)}
     ];
 
     // ie does not support this and safari < 10 does not either
     if (window.Element.prototype.append) {
       appendTypes.push({name: 'append', fn: (el, obj) => el.append(obj)});
+    }
+
+    if (window.Element.prototype.insertAdjacentHTML) {
+      appendTypes.push({name: 'insertAdjacentHTML', fn: (el, obj) => el.insertAdjacentHTML('afterbegin', obj.outerHTML)});
     }
 
     appendTypes.forEach((appendObj) => {
