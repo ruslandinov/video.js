@@ -715,7 +715,6 @@ QUnit[qunitFn]('sourceset', function(hooks) {
     });
 
     QUnit.test('mediaEl.load()', function(assert) {
-      const done = assert.async();
       const source = document.createElement('source');
 
       source.src = this.testSrc.src;
@@ -730,7 +729,6 @@ QUnit[qunitFn]('sourceset', function(hooks) {
 
         this.player.one('sourceset', (e2) => {
           assert.equal(e2.src, this.sourceOne.src, 'we got a sourceset with an empty src');
-          done();
         });
 
         source.src = this.sourceOne.src;
@@ -745,7 +743,6 @@ QUnit[qunitFn]('sourceset', function(hooks) {
 
     QUnit.test('mediaEl.load() x2 at the same time', function(assert) {
       const source = document.createElement('source');
-      const done = assert.async();
 
       source.src = this.sourceOne.src;
       source.type = this.sourceOne.type;
@@ -755,7 +752,6 @@ QUnit[qunitFn]('sourceset', function(hooks) {
 
         this.player.one('sourceset', (e2) => {
           assert.equal(e2.src, this.sourceTwo.src, 'we got a sourceset with an empty src');
-          done();
         });
       });
 
