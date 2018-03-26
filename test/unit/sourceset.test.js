@@ -725,10 +725,10 @@ QUnit[qunitFn]('sourceset', function(hooks) {
       this.mediaEl.removeAttribute('src');
 
       this.player.one('sourceset', (e1) => {
-        assert.equal(e1.src, this.testSrc.src, 'we got a sourceset with an empty src');
+        assert.equal(e1.src, this.testSrc.src, 'we got a sourceset with the expected src');
 
         this.player.one('sourceset', (e2) => {
-          assert.equal(e2.src, this.sourceOne.src, 'we got a sourceset with an empty src');
+          assert.equal(e2.src, this.sourceOne.src, 'we got a sourceset with the expected src');
         });
 
         source.src = this.sourceOne.src;
@@ -748,10 +748,10 @@ QUnit[qunitFn]('sourceset', function(hooks) {
       source.type = this.sourceOne.type;
 
       this.player.one('sourceset', (e1) => {
-        assert.equal(e1.src, this.sourceOne.src, 'we got a sourceset with an empty src');
+        assert.equal(e1.src, this.sourceOne.src, 'we got a sourceset with the expected src');
 
         this.player.one('sourceset', (e2) => {
-          assert.equal(e2.src, this.sourceTwo.src, 'we got a sourceset with an empty src');
+          assert.equal(e2.src, this.sourceTwo.src, 'we got a sourceset with the expected src');
         });
       });
 
