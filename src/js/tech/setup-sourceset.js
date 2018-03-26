@@ -2,6 +2,18 @@ import window from 'global/window';
 import document from 'global/document';
 import mergeOptions from '../utils/merge-options';
 
+const getSrc = (el) => {
+
+  // We use the attribute to check if a source is set because when
+  // the source for the element is set to a blank string. The attribute will
+  // return '' and the property will return window.location.href.
+  if (el.getAttribute('src')) {
+    return el.src;
+  }
+
+  return '';
+};
+
 /**
  * This function is used to fire a sourceset when there is something
  * similar to `mediaEl.load()` being called. It will try to find the source via
@@ -18,9 +30,10 @@ import mergeOptions from '../utils/merge-options';
 const sourcesetLoad = (tech) => {
   const el = tech.el();
 
-  // if `el.src` is set, that source will be loaded.
+  // if the media el has a src property, even an invalid one,
+  // that will always be used over source elements
   if (el.src) {
-    tech.triggerSourceset(el.src);
+    tech.triggerSourceset(getSrc(el));
     return true;
   }
 
@@ -47,7 +60,9 @@ const sourcesetLoad = (tech) => {
 
   // only count valid/non-duplicate source elements
   for (let i = 0; i < sources.length; i++) {
-    const url = sources[i].src;
+    // We do not use the property here because the property will
+    // return window.location.href when src is set to an empty string
+    const url = getSrc(sources[i]);
 
     if (url && srcUrls.indexOf(url) === -1) {
       srcUrls.push(url);
@@ -304,17 +319,12 @@ const setupSourceset = function(tech) {
   // we need to fire sourceset when the player is ready
   // if we find that the media element had a src when it was
   // given to us and that tech element is not in a stalled state
-  if (el.src || el.currentSrc && el.initNetworkState_ !== 3) {
-    if (el.currentSrc) {
-      tech.triggerSourceset(el.currentSrc);
-    } else {
-      sourcesetLoad(tech);
-    }
-  }
 
   // for some reason adding a source element when a mediaElement has no source
   // calls `load` internally right away. We need to handle that.
-  if (!el.src && !el.currentSrc && !tech.$$('source').length) {
+  if (el.currentSrc) {
+    tech.triggerSourceset(el.currentSrc);
+  } else if (!sourcesetLoad(tech)) {
     firstSourceWatch(tech);
   }
 
@@ -323,8 +333,7 @@ const setupSourceset = function(tech) {
     set: (v) => {
       const retval = srcDescriptor.set.call(el, v);
 
-      // we use the getter here to get the actual value set on src
-      tech.triggerSourceset(el.src);
+      tech.triggerSourceset(getSrc(el));
 
       return retval;
     },
@@ -336,7 +345,7 @@ const setupSourceset = function(tech) {
     const retval = oldSetAttribute.call(el, n, v);
 
     if (n === 'src') {
-      tech.triggerSourceset(el.getAttribute('src'));
+      tech.triggerSourceset(getSrc(el));
     }
 
     return retval;
@@ -351,6 +360,10 @@ const setupSourceset = function(tech) {
     // has no source
     if (!sourcesetLoad(tech)) {
       firstSourceWatch(tech);
+
+      // load always triggers a sourceset
+      // we just have to trigger it with a blank source
+      tech.triggerSourceset('');
     }
 
     return retval;

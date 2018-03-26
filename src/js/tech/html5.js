@@ -46,7 +46,7 @@ class Html5 extends Tech {
     // 1) Check if the source is new (if not, we want to keep the original so playback isn't interrupted)
     // 2) Check to see if the network state of the tag was failed at init, and if so, reset the source
     // anyway so the error gets fired.
-    if (source && (this.el_.currentSrc !== source.src || (options.tag && options.tag.initNetworkState_ === 3))) {
+    if (source && this.el_.currentSrc !== source.src) {
       this.setSource(source);
     } else {
       this.handleLateInit_(this.el_);
@@ -289,7 +289,36 @@ class Html5 extends Tech {
 
       // If the original tag is still there, clone and remove it.
       if (el) {
+        // TODO: how can we clone the currentSrc of a media element with
+        // no src attr and no <source> elements before the source is even loaded
+        let currentSrc = '';
+
+        // currentSrc cannot be cloned like other properties as it involves source selection
+        // and the media element may have changed
+        if (el.currentSrc && el.getAttribute('src') && el.currentSrc !== el.src) {
+          const sourceEls = el.querySelectorAll('source');
+          const srcUrls = [];
+
+          for (let i = 0; i < sourceEls.length; i++) {
+            if (sourceEls[i].getAttribute('src') && srcUrls.indexOf(sourceEls[i].src) === -1) {
+              srcUrls.push(sourceEls[i].src);
+            }
+          }
+
+          if (el.getAttribute('src') && el.currentSrc !== el.src) {
+            currentSrc = el.currentSrc;
+          } else if (!srcUrls.filter((s) => el.currentSrc !== s).length) {
+            el.src = el.currentSrc;
+          }
+        }
+
         const clone = el.cloneNode(true);
+
+        if (currentSrc) {
+          clone.src = currentSrc;
+
+          clone.removeAttribute('src');
+        }
 
         if (el.parentNode) {
           el.parentNode.insertBefore(clone, el);

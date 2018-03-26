@@ -38,8 +38,12 @@ const setupEnv = function(env, testName) {
     Html5.prototype.movingMediaElementInDOM = false;
   }
 
+  env.sourcesets_ = [];
   env.sourcesets = 0;
-  env.hook = (player) => player.on('sourceset', () => env.sourcesets++);
+  env.hook = (player) => player.on('sourceset', (e) => {
+    env.sourcesets++;
+    env.sourcesets_.push(e.src);
+  });
   videojs.hook('setup', env.hook);
 
   if ((/audio/i).test(testName)) {
@@ -63,7 +67,7 @@ const setupAfterEach = function(totalSourcesets) {
       this.totalSourcesets = totalSourcesets;
     }
 
-    window.setTimeout(() => {
+    window.setTimeout((e) => {
       assert.equal(this.sourcesets, this.totalSourcesets, 'no additional sourcesets');
 
       this.player.dispose();
@@ -176,7 +180,33 @@ QUnit[qunitFn]('sourceset', function(hooks) {
       });
     });
 
-    QUnit.test('mediaEl.setAttribute("src", ...)"', function(assert) {
+    QUnit.test('mediaEl.src = ...; then unset', function(assert) {
+      const done = assert.async();
+
+      this.mediaEl.src = this.testSrc.src;
+
+      // wait for source to be selected
+      window.setTimeout(() => {
+
+        // make sure the source is selected
+        assert.equal(this.mediaEl.currentSrc, this.testSrc.src, 'currentSrc is set');
+        this.mediaEl.removeAttribute('src');
+
+        // make sure that the source is still selected
+        assert.equal(this.mediaEl.currentSrc, this.testSrc.src, 'currentSrc is set');
+
+        this.player = videojs(this.mediaEl, {
+          enableSourceset: true
+        });
+
+        this.player.one('sourceset', (e) => {
+          assert.equal(e.src, this.testSrc.src, 'sourceset has expected source');
+          done();
+        });
+      }, wait);
+    });
+
+    QUnit.test('mediaEl.setAttribute("src", ...)', function(assert) {
       const done = assert.async();
 
       this.mediaEl.setAttribute('src', this.testSrc.src);
@@ -188,6 +218,32 @@ QUnit[qunitFn]('sourceset', function(hooks) {
         validateSource(assert, this.player, [this.testSrc]);
         done();
       });
+    });
+
+    QUnit.test('mediaEl.setAttribute("src", ...) then unset', function(assert) {
+      const done = assert.async();
+
+      this.mediaEl.setAttribute('src', this.testSrc.src);
+
+      // wait for source to be selected
+      window.setTimeout(() => {
+
+        // make sure the source is selected
+        assert.equal(this.mediaEl.currentSrc, this.testSrc.src, 'currentSrc is set');
+        this.mediaEl.removeAttribute('src');
+
+        // make sure that the source is still selected
+        assert.equal(this.mediaEl.currentSrc, this.testSrc.src, 'currentSrc is set');
+
+        this.player = videojs(this.mediaEl, {
+          enableSourceset: true
+        });
+
+        this.player.one('sourceset', (e) => {
+          assert.equal(e.src, this.testSrc.src, 'sourceset has expected source');
+          done();
+        });
+      }, wait);
     });
 
     QUnit.test('<source> one source', function(assert) {
@@ -202,10 +258,42 @@ QUnit[qunitFn]('sourceset', function(hooks) {
       this.player = videojs(this.mediaEl, {
         enableSourceset: true
       });
-      this.player.one('sourceset', () => {
-        validateSource(assert, this.player, [this.testSrc]);
+      this.player.one('sourceset', (e) => {
+        assert.equal(e.src, this.testSrc.src, 'sourceset has expected source');
         done();
       });
+    });
+
+    QUnit.test('<source> one source, then remove source', function(assert) {
+      const done = assert.async();
+
+      this.source = document.createElement('source');
+      this.source.src = this.testSrc.src;
+      this.source.type = this.testSrc.type;
+
+      // this should set us to that source
+      this.mediaEl.appendChild(this.source);
+
+      // wait for source to be selected
+      window.setTimeout(() => {
+        // make sure the source is selected
+        assert.equal(this.mediaEl.currentSrc, this.testSrc.src, 'currentSrc is set');
+
+        // now remove that source and the currentSrc should still be correct
+        this.mediaEl.removeChild(this.source);
+
+        // make sure that the source is still selected
+        assert.equal(this.mediaEl.currentSrc, this.testSrc.src, 'currentSrc is set');
+
+        this.player = videojs(this.mediaEl, {
+          enableSourceset: true
+        });
+
+        this.player.one('sourceset', (e) => {
+          assert.equal(e.src, this.testSrc.src, 'sourceset has expected source');
+          done();
+        });
+      }, wait);
     });
 
     QUnit.test('<source> two sources', function(assert) {
@@ -219,15 +307,19 @@ QUnit[qunitFn]('sourceset', function(hooks) {
       this.source2.src = this.sourceTwo.src;
       this.source2.type = this.sourceTwo.type;
 
+      // this sets the currentSrc to this.source
       this.mediaEl.appendChild(this.source);
+
+      // this will only be taken into account when calling load
+      // which we don't do
       this.mediaEl.appendChild(this.source2);
 
       this.player = videojs(this.mediaEl, {
         enableSourceset: true
       });
 
-      this.player.one('sourceset', () => {
-        validateSource(assert, this.player, [this.sourceOne, this.sourceTwo]);
+      this.player.one('sourceset', (e) => {
+        assert.equal(e.src, this.sourceOne.src, 'sourceset has expected source');
         done();
       });
     });
@@ -317,7 +409,20 @@ QUnit[qunitFn]('sourceset', function(hooks) {
       this.player.tech_.el_.src = this.testSrc.src;
     });
 
-    QUnit.test('mediaEl.setAttribute("src", ...)"', function(assert) {
+    QUnit.test('mediaEl.src = ...; blank string', function(assert) {
+      const done = assert.async();
+
+      this.player = videojs(this.mediaEl, {enableSourceset: true});
+
+      this.player.one('sourceset', (e) => {
+        assert.equal(e.src, '', 'sourceset fires with blank string');
+        done();
+      });
+
+      this.player.tech_.el_.src = '';
+    });
+
+    QUnit.test('mediaEl.setAttribute("src", ...)', function(assert) {
       const done = assert.async();
 
       this.player = videojs(this.mediaEl, {enableSourceset: true});
@@ -328,6 +433,19 @@ QUnit[qunitFn]('sourceset', function(hooks) {
       });
 
       this.player.tech_.el_.setAttribute('src', this.testSrc.src);
+    });
+
+    QUnit.test('mediaEl.setAttribute("src", ...) blank string', function(assert) {
+      const done = assert.async();
+
+      this.player = videojs(this.mediaEl, {enableSourceset: true});
+
+      this.player.one('sourceset', (e) => {
+        assert.equal(e.src, '', 'sourceset fires with blank string');
+        done();
+      });
+
+      this.player.tech_.el_.setAttribute('src', '');
     });
 
     const appendTypes = [
@@ -345,7 +463,6 @@ QUnit[qunitFn]('sourceset', function(hooks) {
     }
 
     appendTypes.forEach((appendObj) => {
-
       QUnit.test(`<source> one source through ${appendObj.name}`, function(assert) {
         const done = assert.async();
 
@@ -546,20 +663,45 @@ QUnit[qunitFn]('sourceset', function(hooks) {
 
         this.player.tech_.el_.setAttribute('src', this.sourceOne.src);
       });
+
+      QUnit.test(`one <source> with no src attribute through ${appendObj.name}`, function(assert) {
+        this.source = document.createElement('source');
+        this.player = videojs(this.mediaEl, {enableSourceset: true});
+
+        this.totalSourcesets = 0;
+
+        this.player.one('sourceset', (e) => {
+          assert.ok(false, 'this should not happen');
+        });
+
+        // normally just appending would trigger a sourceset
+        // but this source is invalid so it should not
+        appendObj.fn(this.player.tech_.el_, this.source);
+      });
+
+      QUnit.test(`one <source> with blank string src attribute through ${appendObj.name}`, function(assert) {
+        this.source = document.createElement('source');
+        this.source.src = '';
+
+        this.totalSourcesets = 0;
+
+        this.player = videojs(this.mediaEl, {enableSourceset: true});
+
+        this.player.one('sourceset', (e) => {
+          assert.ok(false, 'this should not happen');
+        });
+
+        // normally just appending would trigger a sourceset
+        // but this source is invalid so it should not
+        appendObj.fn(this.player.tech_.el_, this.source);
+      });
     });
 
     QUnit.test('no source and load', function(assert) {
-      const done = assert.async();
-
       this.player = videojs(this.mediaEl, {enableSourceset: true});
       this.player.tech_.el_.load();
 
-      this.totalSourcesets = 0;
-
-      window.setTimeout(() => {
-        assert.equal(this.sourcesets, 0, 'no sourceset');
-        done();
-      }, wait);
+      this.totalSourcesets = 1;
     });
   }));
 
@@ -639,6 +781,19 @@ QUnit[qunitFn]('sourceset', function(hooks) {
       this.mediaEl.src = this.testSrc.src;
     });
 
+    QUnit.test('mediaEl.src = ...; blank string', function(assert) {
+      const done = assert.async();
+
+      this.totalSourcesets = 2;
+
+      this.player.one('sourceset', (e) => {
+        assert.equal(e.src, '', 'sourceset event is blank string');
+        done();
+      });
+
+      this.mediaEl.src = '';
+    });
+
     QUnit.test('mediaEl.src = ... x2 at the same time', function(assert) {
       const done = assert.async();
 
@@ -672,6 +827,19 @@ QUnit[qunitFn]('sourceset', function(hooks) {
       this.mediaEl.setAttribute('src', this.testSrc.src);
     });
 
+    QUnit.test('mediaEl.setAttribute("src", ...) blank string', function(assert) {
+      const done = assert.async();
+
+      this.totalSourcesets = 2;
+
+      this.player.one('sourceset', (e) => {
+        assert.equal(e.src, '', 'sourceset event is blank string');
+        done();
+      });
+
+      this.mediaEl.setAttribute('src', '');
+    });
+
     QUnit.test('mediaEl.setAttribute("src", ...) x2 at the same time', function(assert) {
       const done = assert.async();
 
@@ -688,12 +856,8 @@ QUnit[qunitFn]('sourceset', function(hooks) {
       this.mediaEl.setAttribute('src', this.sourceTwo.src);
     });
 
-    QUnit.test('load() with a src attribute', function(assert) {
+    QUnit.test('mediaEl.load() with a src attribute', function(assert) {
       const done = assert.async();
-
-      this.player = videojs(this.mediaEl, {
-        enableSourceset: true
-      });
 
       this.totalSourcesets = 1;
 
@@ -732,6 +896,40 @@ QUnit[qunitFn]('sourceset', function(hooks) {
         source.type = this.sourceOne.type;
 
         this.mediaEl.load();
+      });
+
+      this.mediaEl.appendChild(source);
+      this.mediaEl.load();
+    });
+
+    QUnit.test('mediaEl.load() no src attr', function(assert) {
+      const source = document.createElement('source');
+
+      this.totalSourcesets = 2;
+      // the only way to unset a source, so that we use the source
+      // elements instead
+      this.mediaEl.removeAttribute('src');
+
+      this.player.one('sourceset', (e1) => {
+        assert.equal(e1.src, '', 'we got a sourceset with the expected src');
+      });
+
+      this.mediaEl.appendChild(source);
+      this.mediaEl.load();
+    });
+
+    QUnit.test('mediaEl.load() empty string src attr', function(assert) {
+      const source = document.createElement('source');
+
+      this.totalSourcesets = 2;
+      source.src = '';
+
+      // the only way to unset a source, so that we use the source
+      // elements instead
+      this.mediaEl.removeAttribute('src');
+
+      this.player.one('sourceset', (e1) => {
+        assert.equal(e1.src, '', 'we got a sourceset with the expected src');
       });
 
       this.mediaEl.appendChild(source);
