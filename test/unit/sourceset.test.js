@@ -375,13 +375,11 @@ QUnit[qunitFn]('sourceset', function(hooks) {
 
         this.player = videojs(this.mediaEl, {enableSourceset: true});
 
-        this.player.one('sourceset', (e) => {
-          validateSource(assert, this.player, [this.testSrc], false);
+        this.player.one('sourceset', (e1) => {
+          assert.equal(e1.src, this.testSrc.src, 'event has expected source');
 
           this.player.one('sourceset', (e2) => {
-            // should be the same event
-            validateSource(assert, this.player, [this.testSrc], false);
-
+            assert.equal(e2.src, this.testSrc.src, 'second event has expected source');
             done();
           });
         });
