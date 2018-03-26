@@ -836,7 +836,7 @@ QUnit[qunitFn]('sourceset', function(hooks) {
     });
 
     player.ready(function() {
-      // the second sourceset ends up being the second source because when the first source is set
+      // the first sourceset ends up being the second source because when the first source is set
       // the tech isn't ready so we delay it, then the second source comes and the tech is ready
       // so it ends up being triggered immediately.
       player.on('sourceset', (e) => {
