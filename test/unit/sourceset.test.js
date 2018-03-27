@@ -7,7 +7,7 @@ import sinon from 'sinon';
 
 const Html5 = videojs.getTech('Html5');
 const wait = 1;
-let qunitFn = 'module';
+let qunitFn = 'skip';
 const testSrc = {
   src: 'http://vjs.zencdn.net/v/oceans.mp4',
   type: 'video/mp4'

@@ -13,7 +13,7 @@ import {assign} from '../utils/obj';
 import mergeOptions from '../utils/merge-options.js';
 import toTitleCase from '../utils/to-title-case.js';
 import {NORMAL as TRACK_TYPES} from '../tracks/track-types';
-import setupSourceset from './setup-sourceset';
+import patchSourceset from './patch-sourceset';
 
 /**
  * HTML5 Media Controller - Wrapper for HTML5 Media API
@@ -129,7 +129,14 @@ class Html5 extends Tech {
    * the source is changed. Fires `sourceset` just after the source has changed
    */
   setupSourcesetHandling_() {
-    setupSourceset(this);
+    patchSourceset(this.el_);
+    this.el_.addEventListener('sourceset', (e) => {
+      // stop this from bubbling to the normal handlers
+      e.preventDefault();
+      e.stopPropagation();
+
+      this.triggerSourceset(e.detail.src);
+    });
   }
 
   /**
